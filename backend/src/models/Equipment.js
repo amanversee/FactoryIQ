@@ -21,7 +21,7 @@ const EquipmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['OPERATIONAL', 'MAINTENANCE', 'DOWN', 'DECOMMISSIONED'],
+    enum: ['OPERATIONAL', 'MAINTENANCE', 'DOWN', 'OFFLINE', 'DECOMMISSIONED'],
     default: 'OPERATIONAL'
   },
   healthScore: {
