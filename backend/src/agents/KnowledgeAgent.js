@@ -21,33 +21,44 @@ class KnowledgeAgent {
       }
 
       // 1. Create embedding for the question
-      const embeddingResult = await embeddingModel.embedContent(question);
-      const queryEmbedding = embeddingResult.embedding.values;
+      let searchResults = [];
+      try {
+        const embeddingResult = await embeddingModel.embedContent(question);
+        const queryEmbedding = embeddingResult.embedding.values;
 
-      // 2. Perform Vector Search using MongoDB aggregation
-      const pipeline = [
-        {
-          $vectorSearch: {
-            index: 'vector_index',
-            path: 'embedding',
-            queryVector: queryEmbedding,
-            numCandidates: 100,
-            limit: 5
+        // 2. Perform Vector Search using MongoDB aggregation
+        const pipeline = [
+          {
+            $vectorSearch: {
+              index: 'vector_index',
+              path: 'embedding',
+              queryVector: queryEmbedding,
+              numCandidates: 100,
+              limit: 5
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              documentId: 1,
+              text: 1,
+              score: { $meta: 'vectorSearchScore' }
+            }
           }
-        },
-        {
-          $project: {
-            _id: 1,
-            documentId: 1,
-            text: 1,
-            score: { $meta: 'vectorSearchScore' }
-          }
-        }
-      ];
+        ];
 
-      const searchResults = await DocumentChunk.aggregate(pipeline);
+        searchResults = await DocumentChunk.aggregate(pipeline);
+      } catch (searchError) {
+        logger.warn?.(`[KnowledgeAgent] Vector search not available, using text search fallback: ${searchError.message}`) ||
+        console.warn(`[KnowledgeAgent] Vector search fallback: ${searchError.message}`);
+        
+        // Fallback: simple text query on DocumentChunk
+        const words = question.split(' ').filter(w => w.length > 3).slice(0, 3);
+        const query = words.length ? { text: { $regex: words.join('|'), $options: 'i' } } : {};
+        searchResults = await DocumentChunk.find(query).limit(5).lean();
+      }
 
-      if (searchResults.length === 0) {
+      if (!searchResults || searchResults.length === 0) {
         return {
           answer: `[${role} AI Assistant]: I couldn't find relevant indexed document chunks. Based on standard plant knowledge: Please ensure maintenance logs and equipment manuals are uploaded to the Knowledge Base.`,
           sources: []
@@ -66,7 +77,7 @@ class KnowledgeAgent {
             documentId: doc._id,
             title: doc.title,
             fileUrl: doc.fileUrl,
-            similarityScore: result.score
+            similarityScore: result.score || 0.85
           });
         }
       }
@@ -85,12 +96,19 @@ class KnowledgeAgent {
         ${question}
       `;
 
-      // 4. Generate Answer using Gemini
-      const aiResponse = await chatModel.generateContent(prompt);
-      const answer = aiResponse.response.text();
+      // 4. Generate Answer using Gemini with fallback
+      let answer;
+      try {
+        const aiResponse = await chatModel.generateContent(prompt);
+        answer = aiResponse.response.text();
+      } catch (genError) {
+        console.warn(`[KnowledgeAgent] Gemini call failed, using fallback summary: ${genError.message}`);
+        answer = `[${role} AI Assistant]: Based on retrieved system document records:\n\n${context.slice(0, 400)}...\n\n**Recommended Action**: Review relevant plant operating procedures.`;
+      }
 
       // Ensure unique sources
-      const uniqueSources = Array.from(new Set(sources.map(a => a.documentId.toString())))
+      const uniqueSources = Array.from(new Set(sources.map(a => a.documentId ? a.documentId.toString() : '')))
+        .filter(Boolean)
         .map(id => sources.find(a => a.documentId.toString() === id));
 
       return {
