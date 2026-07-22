@@ -1,8 +1,10 @@
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://factoryiq-z70l.onrender.com';
+
 // Create an Axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_URL ? (API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`) : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
