@@ -173,7 +173,8 @@ export default function DocumentsPage() {
 
         {/* Documents Table */}
         <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[700px]">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider font-semibold">
               <tr>
                 <th className="px-6 py-3.5">Document Title</th>
@@ -254,6 +255,7 @@ export default function DocumentsPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

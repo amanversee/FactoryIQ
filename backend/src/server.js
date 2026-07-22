@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -6,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const morgan = require('morgan');
+const fs = require('fs');
 const connectDB = require('./config/db');
 const socketConfig = require('./utils/socket');
 const errorHandler = require('./middlewares/error');
@@ -34,7 +36,9 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Set security headers
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 
 // Sanitize data (Express 5 compatible)
 app.use((req, res, next) => {
@@ -64,6 +68,15 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/engineer', require('./routes/engineer'));
 app.use('/api/maintenance', require('./routes/maintenance'));
 app.use('/api/auditor', require('./routes/auditor'));
+
+// Serve static assets in production or when frontend dist exists
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(frontendDistPath, 'index.html'));
+  });
+}
 
 // Error Handler Middleware
 app.use(errorHandler);

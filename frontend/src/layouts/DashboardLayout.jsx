@@ -30,7 +30,9 @@ import {
   UserCheck,
   Sliders,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Menu,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useAuthStore from '../store/authStore';
@@ -41,6 +43,7 @@ export default function DashboardLayout() {
   const { user, logout, switchRoleDemo, getRoleHomeRoute } = useAuthStore();
 
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,22 +171,37 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans selection:bg-blue-600 selection:text-white">
       
+      {/* Mobile Drawer Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+        />
+      )}
+
       {/* ========================================================= */}
-      {/* ROLE-BASED SIDEBAR NAVIGATION */}
+      {/* ROLE-BASED SIDEBAR NAVIGATION (Desktop & Mobile Drawer) */}
       {/* ========================================================= */}
       <aside 
         className={cn(
-          "bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-20 shadow-xl transition-all duration-300 relative shrink-0",
-          collapsed ? "w-20" : "w-64"
+          "bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/80 flex flex-col z-50 shadow-2xl transition-all duration-300 relative shrink-0",
+          // Mobile Drawer styling vs Desktop sidebar
+          "fixed inset-y-0 left-0 md:static md:z-20",
+          mobileMenuOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0",
+          collapsed ? "md:w-20" : "md:w-64"
         )}
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800/80 shrink-0">
-          <Link to={getRoleHomeRoute(activeRole)} className="flex items-center gap-3 overflow-hidden">
+          <Link 
+            to={getRoleHomeRoute(activeRole)} 
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 overflow-hidden"
+          >
             <div className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 text-white shrink-0">
               <Factory className="w-5 h-5" />
             </div>
-            {!collapsed && (
+            {(!collapsed || mobileMenuOpen) && (
               <div className="flex flex-col">
                 <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white leading-none">
                   Factory<span className="text-blue-500">IQ</span>
@@ -195,13 +213,24 @@ export default function DashboardLayout() {
             )}
           </Link>
 
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
+          {/* Desktop collapse button & Mobile Close button */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Role Navigation Menu */}
@@ -212,7 +241,7 @@ export default function DashboardLayout() {
 
             return (
               <div key={category} className="space-y-1">
-                {!collapsed && (
+                {(!collapsed || mobileMenuOpen) && (
                   <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
                     {category}
                   </p>
@@ -223,6 +252,7 @@ export default function DashboardLayout() {
                     <Link
                       key={item.name}
                       to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                         isActive 
@@ -231,8 +261,8 @@ export default function DashboardLayout() {
                       )}
                     >
                       <item.icon className={cn("w-5 h-5 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-400 dark:text-slate-500")} />
-                      {!collapsed && <span>{item.name}</span>}
-                      {isActive && !collapsed && (
+                      {(!collapsed || mobileMenuOpen) && <span>{item.name}</span>}
+                      {isActive && (!collapsed || mobileMenuOpen) && (
                         <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                       )}
                     </Link>
@@ -245,7 +275,7 @@ export default function DashboardLayout() {
 
         {/* Sidebar Footer User Profile & Role Info */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className={cn("flex items-center gap-3 p-2 rounded-xl border border-slate-200/60 dark:border-slate-800", collapsed && "justify-center")}>
+          <div className={cn("flex items-center gap-3 p-2 rounded-xl border border-slate-200/60 dark:border-slate-800", (collapsed && !mobileMenuOpen) && "justify-center")}>
             <div className={cn(
               "w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md",
               activeRole === 'ADMIN' ? "bg-gradient-to-tr from-purple-600 to-indigo-600" :
@@ -255,7 +285,7 @@ export default function DashboardLayout() {
             )}>
               {user?.name ? user.name.substring(0, 2).toUpperCase() : 'US'}
             </div>
-            {!collapsed && (
+            {(!collapsed || mobileMenuOpen) && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user?.name || 'User Name'}</p>
                 <span className={cn(
@@ -271,15 +301,41 @@ export default function DashboardLayout() {
             )}
           </div>
 
+          {/* Role Switcher Pills in Mobile Sidebar */}
+          <div className="mt-3 md:hidden space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 block">Switch Demo Role</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { key: 'ADMIN', label: 'Admin' },
+                { key: 'ENGINEER', label: 'Engineer' },
+                { key: 'MAINTENANCE_TEAM', label: 'Maint' },
+                { key: 'AUDITOR', label: 'Auditor' }
+              ].map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => { handleRoleSwitch(r.key); setMobileMenuOpen(false); }}
+                  className={cn(
+                    "py-1 px-2 text-[10px] font-bold rounded-lg transition-all text-center",
+                    activeRole === r.key
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button 
             onClick={logout}
             className={cn(
               "mt-2 flex items-center gap-2.5 px-3 py-2 w-full rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors",
-              collapsed && "justify-center px-0"
+              (collapsed && !mobileMenuOpen) && "justify-center px-0"
             )}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            {!collapsed && <span>Sign Out</span>}
+            {(!collapsed || mobileMenuOpen) && <span>Sign Out</span>}
           </button>
         </div>
       </aside>
@@ -290,19 +346,27 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* TOP NAVBAR HEADER */}
-        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 shrink-0 z-10 sticky top-0">
+        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-3 sm:px-6 shrink-0 z-10 sticky top-0">
           
-          {/* Left: Breadcrumb & Role Context Indicator */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-bold text-blue-600 dark:text-blue-400">FactoryIQ</span>
-              <span className="text-slate-400">/</span>
-              <span className="font-extrabold text-slate-800 dark:text-slate-200">{getBreadcrumbTitle()}</span>
+          {/* Left: Mobile Hamburger Toggle & Breadcrumb */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+              title="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs min-w-0">
+              <span className="font-bold text-blue-600 dark:text-blue-400 shrink-0">FactoryIQ</span>
+              <span className="text-slate-400 shrink-0">/</span>
+              <span className="font-extrabold text-slate-800 dark:text-slate-200 truncate">{getBreadcrumbTitle()}</span>
             </div>
           </div>
 
           {/* Quick Search */}
-          <div className="hidden md:flex items-center relative max-w-sm w-full mx-4">
+          <div className="hidden lg:flex items-center relative max-w-sm w-full mx-4">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
             <input
               type="text"
@@ -314,7 +378,7 @@ export default function DashboardLayout() {
           </div>
 
           {/* Right Header Utilities & Role Switcher Badge */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
             {/* Enterprise Role Switcher (Evaluator Quick Toggle) */}
             <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -410,7 +474,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* PAGE CONTENT CONTAINER */}
-        <main className="flex-1 overflow-auto bg-slate-100/60 dark:bg-slate-950 p-6 md:p-8">
+        <main className="flex-1 overflow-auto bg-slate-100/60 dark:bg-slate-950 p-3 sm:p-6 md:p-8">
           <div className="max-w-7xl mx-auto h-full">
             <Outlet />
           </div>
